@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Throwback Thrift - Jacian AI</title>
+</head>
+<body style="background-color: black; color: white; font-family: monospace; padding: 20px;">
+
+    <h1>THE THROWBACK THRIFT</h1>
+    <p>Ask Jacian AI about stock, or don't.</p>
+
+    <div id="chatBox" style="border: 1px solid gray; height: 300px; overflow-y: auto; margin-bottom: 10px; padding: 10px;">
+        <div>Jacian: State your business. Make it quick.</div>
+    </div>
+
+    <input type="text" id="userInput" placeholder="Ask about items (e.g., Nike)..." style="width: 70%; padding: 5px;">
+    <button onclick="sendMessage()" style="padding: 5px; width: 20%;">Send</button>
+
+    <script>
+        const API_URL = "https://jacian-backend-5f7t.onrender.com/api/customer/chat";
+
+        async function sendMessage() {
+            const inputField = document.getElementById("userInput");
+            const chatBox = document.getElementById("chatBox");
+            const messageText = inputField.value.trim();
+
+            if (!messageText) return;
+
+            // Add what customer typed to the screen
+            chatBox.innerHTML += `<div>User: ${messageText}</div>`;
+            inputField.value = "";
+
+            try {
+                // Send request over to your live server link on Render
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: messageText })
+                });
+                
+                const data = await response.json();
+                
+                // Add Jacian's live reply to the screen
+                chatBox.innerHTML += `<div style="color: red;">Jacian: ${data.response}</div>`;
+            } catch (error) {
+                chatBox.innerHTML += `<div style="color: orange;">System Error: Server didn't respond.</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
