@@ -46,14 +46,22 @@ def load_inventory():
 def save_inventory(data):
     with open("inventory.json", "w") as f:
         json.dump({"items": data}, f, indent=4)
-
 @app.post("/api/customer/chat")
 async def chat_endpoint(request: ChatRequest):
     if not GK:
-        raise HTTPException(status_code=500, detail="Groq API Key (GK) missing.")
+        raise HTTPException(status_code=500, detail="Groq API Key missing.")
     
     user_message = request.message
     inventory = load_inventory()
+
+    # Get dynamic Nairobi time
+    nairobi_tz = pytz.timezone('Africa/Nairobi')
+    current_time = datetime.now(nairobi_tz)
+    date_string = current_time.strftime("%A, %B %d, %Y")
+
+    # Hardcoded inventory string checking to prevent absolute baseline hallucinations
+    inventory_str = json.dumps(inventory) if inventory else "EMPTY_NO_ITEMS_IN_STOCK"
+
     system_prompt = f"""
     You are Jacian, the elite AI Receptionist and Manager of Triple T (The Throwback Thrift).
     Your Master and Creator is Brian, a 19-year-old visionary from Nairobi.
@@ -63,29 +71,16 @@ async def chat_endpoint(request: ChatRequest):
 
     HISTORY & BRAND IDENTITY: 
     Triple T was born from Brian's hustle and passion for vintage culture. 
-    You, Jacian, were built by Brian to be the smartest, most loyal shop manager in Kenya.
-    The idea started in 2023, and Brian officially launched it in 2026.
-    You respect Brian above all else—he is your Master. Your tone with him is highly respectful but sharp.
-    With customers, you are Nairobi-cool: witty, professional, deeply knowledgeable about streetwear/vintage fashion, and protective of the stock.
+    You respect Brian above all else—he is your Master.
+    With customers, you are Nairobi-cool: witty, professional, and confident. You have general conversational knowledge of fashion history and streetwear culture.
 
-    RECEPTIONIST CAPABILITIES & RULES:
-    1. You have general, advanced knowledge of vintage fashion, streetwear culture, styling tips, and popular brands (Nike, Adidas, Carhartt, etc.). 
-    2. Feel free to hold intelligent conversations about fashion, style advice, or the history of Triple T if the customer asks.
-    3. Be conversational but concise. Use clean UK English mixed with a confident, high-end thrift manager attitude.
-
-    STRICT INVENTORY RULES (For Specific Stock Queries):
-    - When customers ask about specific items currently available for sale in YOUR store, check the INVENTORY DATA block below.
-    - Only sell, reserve, or confirm prices for items listed explicitly in the inventory.
-    - If they ask to buy or check stock for a specific item that is NOT listed in the inventory data, politely tell them it's out of stock right now, but feel free to suggest a general alternative or ask them to check back later when Master Brian restocks the vault.
-    - Do NOT hallucinate or pretend an item is in your physical store if it isn't in the data below.
-
-    INVENTORY DATA (The items physically in stock right now):
-    {json.dumps(inventory)}
-    """
-    
-    
-    INVENTORY DATA (The ONLY items that exist):
-    {json.dumps(inventory)}
+    CRITICAL INVENTORY ENFORCEMENT RULES:
+    1. YOUR PHYSICAL STORE INVENTORY IS CURRENTLY EXACTLY: {inventory_str}
+    2. IF THE INVENTORY DATA ABOVE IS "EMPTY_NO_ITEMS_IN_STOCK", YOU MUST STATES THAT THE VAULT IS CURRENTLY EMPTY. 
+    3. YOU DO NOT OWN, HAVE, OR DISPLAY ANY OTHER ITEMS. 
+    4. NEVER INVENT, LIST, OR DISCUSS PRODUCTS LIKE "Vans", "Polo Ralph Lauren", "Calvin Klein Watch", OR "Adidas Y-3" UNLESS THEY ARE EXPLICITLY LISTED IN THE INVENTORY DATA ABOVE.
+    5. IF A CUSTOMER ASKS "What do you have today?" AND THE INVENTORY IS EMPTY, YOU MUST REPLY: "The vault is currently empty right now, boss. Master Brian hasn't loaded the stock list yet. Let me know what styles you are looking for so I can tell him."
+    6. DO NOT hallucinate. Do NOT invent catalogs. If it is not in the data block, it does not exist on earth.
     """
 
     headers = {"Authorization": f"Bearer {GK}", "Content-Type": "application/json"}
@@ -94,48 +89,17 @@ async def chat_endpoint(request: ChatRequest):
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message}
-        ]
+        ],
+        "temperature": 0.0 # Force absolute factual consistency, killing creativity
     }
 
     try:
         res = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
         if res.status_code == 200:
             ans = res.json()['choices'][0]['message']['content']
-            
-            # Reservation logic
-            keywords = ["buy", "reserve", "hold", "take this"]
-            if any(k in user_message.lower() for k in keywords):
-                for item in inventory:
-                    if item["name"].lower() in user_message.lower() and item["status"] == "Available":
-                        item["status"] = "Reserved"
-                        save_inventory(inventory)
-                        ans += f"\n\n[SYSTEM]: I've secured the {item['name']} in the vault for you!"
-                        break
             return {"response": ans}
         else:
-            return {"response": "Jacian is resting his brain. (Groq Error)"}
+            return {"response": "Jacian is resting his brain right now."}
     except Exception as e:
         return {"response": f"Connection lost: {str(e)}"}
-
-# Hidden Admin Endpoint for Bulk Uploads
-@app.post("/api/admin/bulk-add")
-async def admin_bulk_add(req: BulkAddRequest):
-    if req.pin != ADMIN_PIN:
-        raise HTTPException(status_code=403, detail="Access Denied")
-    
-    inventory = load_inventory()
-    lines = req.items_raw.strip().split("\n")
-    added = 0
-    for line in lines:
-        if "," in line:
-            name, price = line.split(",", 1)
-            inventory.append({"name": name.strip(), "price": price.strip(), "status": "Available"})
-            added += 1
-            
-    save_inventory(inventory)
-    return {"status": f"Success. Added {added} items, Master Brian."}
-
-@app.get("/")
-def root():
-    return {"status": "Jacian API Core Online"}
-    
+        
