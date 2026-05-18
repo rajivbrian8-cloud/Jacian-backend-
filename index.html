@@ -1,52 +1,159 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Throwback Thrift - Jacian AI</title>
+    <title>THE THROWBACK THRIFT</title>
+    <style>
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: monospace;
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .subtitle {
+            font-size: 14px;
+            margin-bottom: 20px;
+            color: #aaaaaa;
+        }
+        #chat-container {
+            border: 1px solid #ffffff;
+            height: 450px;
+            overflow-y: auto;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #000000;
+        }
+        .message {
+            margin-bottom: 12px;
+            line-height: 1.4;
+            font-size: 15px;
+        }
+        /* Both User and Jacian text are now white/light gray for a premium look */
+        .user-msg {
+            color: #ffffff;
+        }
+        .jacian-msg {
+            color: #e0e0e0; 
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+        input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ffffff;
+            background: #000000;
+            color: #ffffff;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+        }
+        button {
+            padding: 10px 20px;
+            border: 1px solid #ffffff;
+            background: #ffffff;
+            color: #000000;
+            font-family: monospace;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        button:active {
+            background: #aaaaaa;
+        }
+    </style>
 </head>
-<body style="background-color: black; color: white; font-family: monospace; padding: 20px;">
+<body>
 
-    <h1>THE THROWBACK THRIFT</h1>
-    <p>Ask Jacian AI anything.</p>
+<div class="container">
+    <h1>The Throwback Thrift</h1>
+    <div class="subtitle">Ask Jacian AI anything.</div>
 
-    <div id="chatBox" style="border: 1px solid gray; height: 500px; overflow-y: auto; margin-bottom: 20px; padding: 20px;">
-        <div>Jacian: State your business.</div>
+    <div id="chat-container">
+        <div class="message jacian-msg">Jacian: State your business.</div>
     </div>
 
-    <input type="text" id="userInput" placeholder="Ask about items..." style="width: 70%; padding: 5px;">
-    <button onclick="sendMessage()" style="padding: 5px; width: 20%;">Send</button>
+    <div class="input-area">
+        <input type="text" id="user-input" placeholder="Ask about items..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
 
-    <script>
-        const API_URL = "https://jacian-backend-5f7t.onrender.com/api/customer/chat";
+<script>
+    // Replace this string with your exact live Render web service URL if it differs
+    const BACKEND_URL = "https://jacian-backend-5f7t.onrender.com";
 
-        async function sendMessage() {
-            const inputField = document.getElementById("userInput");
-            const chatBox = document.getElementById("chatBox");
-            const messageText = inputField.value.trim();
+    const chatContainer = document.getElementById('chat-container');
+    const userInput = document.getElementById('user-input');
 
-            if (!messageText) return;
-
-            // Add what customer typed to the screen
-            chatBox.innerHTML += `<div>User: ${messageText}</div>`;
-            inputField.value = "";
-
-            try {
-                // Send request over to your live server link on Render
-                const response = await fetch(API_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: messageText })
-                });
-                
-                const data = await response.json();
-                
-                // Add Jacian's live reply to the screen
-                chatBox.innerHTML += `<div style="color: black;">Jacian: ${data.response}</div>`;
-            } catch (error) {
-                chatBox.innerHTML += `<div style="color: orange;">System Error: Server didn't respond.</div>`;
-            }
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
         }
-    </script>
+    }
+
+    async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        // Append User Message
+        appendMessage(`User: ${text}`, 'user-msg');
+        userInput.value = '';
+
+        // Append Loading State
+        const loadingId = appendMessage('Jacian: Typing...', 'jacian-msg');
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/customer/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+
+            const data = await response.json();
+            document.getElementById(loadingId).remove();
+
+            if (data.response) {
+                appendMessage(`Jacian: ${data.response}`, 'jacian-msg');
+            } else {
+                appendMessage('Jacian: Connection error.', 'jacian-msg');
+            }
+        } catch (error) {
+            document.getElementById(loadingId).remove();
+            appendMessage('Jacian: Server unreachable.', 'jacian-msg');
+            console.error(error);
+        }
+    }
+
+    function appendMessage(text, className) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${className}`;
+        const uniqueId = 'msg-' + Math.random().toString(36).substr(2, 9);
+        msgDiv.id = uniqueId;
+        msgDiv.innerText = text;
+        chatContainer.appendChild(msgDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        return uniqueId;
+    }
+</script>
+
 </body>
 </html>
