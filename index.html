@@ -116,11 +116,11 @@
         const text = userInput.value.trim();
         if (!text) return;
 
-        // Append User Message (Purple)
+        // Displays user message in bold purple style
         appendMessage(`User: ${text}`, 'user-msg');
         userInput.value = '';
 
-        // Append Loading State (White)
+        // Displays standard typing notification
         const loadingId = appendMessage('Jacian: Typing...', 'jacian-msg');
 
         try {
@@ -156,6 +156,3 @@
         return uniqueId;
     }
 </script>
-
-</body>
-</html>
