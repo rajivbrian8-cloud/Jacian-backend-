@@ -43,11 +43,14 @@
             line-height: 1.4;
             font-size: 15px;
         }
+        /* User text in a distinct, clean neon purple */
         .user-msg {
-            color:(neon purple )#ffffff;
+            color: #a855f7; 
+            font-weight: bold;
         }
+        /* Jacian's text stays crisp white to stand out */
         .jacian-msg {
-            color:(white) #e0e0e0; 
+            color: #ffffff; 
         }
         .input-area {
             display: flex;
@@ -97,7 +100,7 @@
 </div>
 
 <script>
-    // Replace this string with your exact live Render web service URL if it differs
+    // Wires perfectly into your live backend service instance
     const BACKEND_URL = "https://jacian-backend-5f7t.onrender.com";
 
     const chatContainer = document.getElementById('chat-container');
@@ -113,11 +116,11 @@
         const text = userInput.value.trim();
         if (!text) return;
 
-        // Append User Message
+        // Append User Message (Purple)
         appendMessage(`User: ${text}`, 'user-msg');
         userInput.value = '';
 
-        // Append Loading State
+        // Append Loading State (White)
         const loadingId = appendMessage('Jacian: Typing...', 'jacian-msg');
 
         try {
